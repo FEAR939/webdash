@@ -143,8 +143,6 @@
                     }
                     const util = await response.json();
 
-                    if (!util.cpu || !util.mem) return setTimeout(loop, 1000);
-
                     // Add timestamp labels (optional but good practice)
                     const now = new Date();
                     const label = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
