@@ -2,6 +2,7 @@ import os from "os";
 import bun from "bun";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
+import { cors } from "hono/cors";
 const app = new Hono();
 
 //Create function to get CPU information
@@ -93,6 +94,12 @@ app.get("/gethostname", (c) => {
 });
 
 app.get("/", serveStatic({ path: "./frontend/index.html" }));
+app.use(
+  "*",
+  cors({
+    origin: "*",
+  }),
+);
 
 bun.serve({
   port: 3000,
