@@ -7,12 +7,8 @@
     </head>
     <body class="h-fit w-full bg-neutral-900 p-4 flex flex-wrap">
         <div id="hostname" class="text-white w-full"></div>
-        <div class="md:w-1/2 w-full h-64">
+        <div class="w-full aspect-[3/1]">
             <canvas id="CPUchart"></canvas>
-        </div>
-
-        <div class="md:w-1/2 w-full h-64">
-            <canvas id="RAMchart"></canvas>
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -20,7 +16,9 @@
         <script>
             const hostnamefield = document.getElementById("hostname");
             const CPUctx = document.getElementById("CPUchart").getContext("2d");
-            const RAMctx = document.getElementById("RAMchart").getContext("2d");
+
+            const cpuData = [];
+            const ramData = [];
 
             async function getTotalMem() {
                 const response = await fetch("/gettotalmem");
@@ -32,11 +30,13 @@
             const chartLineColor = "rgba(54, 162, 235, 1)"; // A nice blue
             const chartFillColor = "rgba(54, 162, 235, 0.2)"; // Semi-transparent blue for fill
 
+            let labels = Array(60).fill(" ");
+
             const CPUchart = new Chart(CPUctx, {
                 type: "line",
                 data: {
                     // You might want labels for the X-axis eventually
-                    // labels: [],
+                    labels: labels,
                     datasets: [
                         {
                             label: "CPU",
@@ -48,79 +48,48 @@
                             tension: 0.1, // Optional: makes the line slightly curved
                             pointRadius: 0, // Hide data points
                             pointHoverRadius: 0, // Hide data points on hover
+                            yAxisID: "cpu",
                         },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            // Configure X-axis ticks/grid color if needed
-                            ticks: { color: "rgba(255, 255, 255, 0.7)" },
-                            grid: { color: "rgba(255, 255, 255, 0.1)" },
-                        },
-                        y: {
-                            beginAtZero: true,
-                            max: 100, // Set maximum value for Y-axis
-                            // Configure Y-axis ticks/grid color
-                            ticks: { color: "rgba(255, 255, 255, 0.7)" },
-                            grid: { color: "rgba(255, 255, 255, 0.1)" },
-                        },
-                    },
-                    plugins: {
-                        // Configure legend color
-                        legend: {
-                            labels: {
-                                color: "rgba(255, 255, 255, 0.9)", // Make legend text visible
-                            },
-                        },
-                    },
-                },
-            });
-
-            const RAMchart = new Chart(RAMctx, {
-                type: "line",
-                data: {
-                    // You might want labels for the X-axis eventually
-                    // labels: [],
-                    datasets: [
                         {
                             label: "RAM",
-                            fill: true,
+                            fill: true, // Fill the area under the line
                             data: [],
                             borderWidth: 1,
-                            borderColor: chartLineColor, // <-- Added: Set line color
-                            backgroundColor: chartFillColor,
+                            borderColor: "rgba(165, 55, 253, 1)", // <-- Added: Set line color
+                            backgroundColor: "rgba(165, 55, 253, 0.2)", // <-- Added: Set fill color (needed for fill: true)
                             tension: 0.1, // Optional: makes the line slightly curved
                             pointRadius: 0, // Hide data points
                             pointHoverRadius: 0, // Hide data points on hover
+                            yAxisID: "ram",
                         },
                     ],
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    // Copy similar options for consistency
+                    animation: false,
                     scales: {
                         x: {
                             // Configure X-axis ticks/grid color if needed
                             ticks: { color: "rgba(255, 255, 255, 0.7)" },
                             grid: { color: "rgba(255, 255, 255, 0.1)" },
                         },
-                        y: {
+                        cpu: {
                             beginAtZero: true,
+                            max: 100,
                             // Configure Y-axis ticks/grid color
                             ticks: { color: "rgba(255, 255, 255, 0.7)" },
                             grid: { color: "rgba(255, 255, 255, 0.1)" },
+                            id: "cpu",
                         },
-                    },
-                    plugins: {
-                        // Configure legend color
-                        legend: {
-                            labels: {
-                                color: "rgba(255, 255, 255, 0.9)", // Make legend text visible
-                            },
+                        ram: {
+                            beginAtZero: true,
+                            position: "right",
+                            // Configure Y2-axis ticks/grid color
+                            ticks: { color: "rgba(255, 255, 255, 0.7)" },
+                            grid: { color: "rgba(255, 255, 255, 0.1)" },
+                            id: "ram",
+                            grid: { drawOnChartArea: false },
                         },
                     },
                 },
@@ -143,27 +112,20 @@
                     }
                     const util = await response.json();
 
-                    // Add timestamp labels (optional but good practice)
-                    const now = new Date();
-                    const label = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+                    cpuData.push(util.cpu);
+                    ramData.push(util.mem);
 
-                    // Add labels and data
-                    CPUchart.data.labels.push(label);
-                    CPUchart.data.datasets[0].data.push(util.cpu);
-                    RAMchart.data.labels.push(label); // Keep labels in sync
-                    RAMchart.data.datasets[0].data.push(util.mem);
-
-                    // Optional: Limit the number of data points shown
                     const maxDataPoints = 60; // Show last 60 seconds
-                    if (CPUchart.data.labels.length > maxDataPoints) {
-                        CPUchart.data.labels.shift(); // Remove oldest label
-                        CPUchart.data.datasets[0].data.shift(); // Remove oldest data point
-                        RAMchart.data.labels.shift();
-                        RAMchart.data.datasets[0].data.shift();
+                    if (cpuData.length > maxDataPoints) {
+                        cpuData.shift(); // Remove oldest label
+                        ramData.shift();
                     }
 
-                    CPUchart.update();
-                    RAMchart.update();
+                    // Add labels and data);
+                    CPUchart.data.datasets[0].data = cpuData;
+                    CPUchart.data.datasets[1].data = ramData;
+
+                    CPUchart.update(0);
 
                     setTimeout(loop, 1000); // Continue loop
                 } catch (error) {
@@ -173,14 +135,10 @@
             }
 
             window.onload = async function () {
-                // Initialize labels arrays if you add them
-                CPUchart.data.labels = [];
-                RAMchart.data.labels = [];
-
                 const hostname = await (await fetch("/gethostname")).text();
                 hostnamefield.textContent = hostname;
 
-                RAMchart.options.scales.y.max = await getTotalMem();
+                CPUchart.options.scales.ram.max = await getTotalMem();
                 loop();
             };
         </script>
